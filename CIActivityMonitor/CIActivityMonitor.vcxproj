@@ -128,10 +128,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ActivityCollector.cpp" />
+    <ClCompile Include="ActivityWindow.cpp" />
     <ClCompile Include="CIActivityMonitorMain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ActivityCollector.h" />
+    <ClInclude Include="ActivityWindow.h" />
+    <ClInclude Include="Utilities.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
