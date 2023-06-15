@@ -12,5 +12,6 @@ public:
 	double totalDuration;
 	bool isActive;
 	ActivityWindow();
+	ActivityWindow(std::string processName);
 };
 

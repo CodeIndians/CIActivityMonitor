@@ -1,6 +1,15 @@
 #include "ActivityCollector.h"
+#include <algorithm>
+#include "Utilities.h"
+#include "json.hpp"
 
-std::unordered_map<HWND, std::chrono::steady_clock::time_point> ActivityCollector::activeWindows;
+using json = nlohmann::json;
+
+// initialize the static list
+std::list<ActivityWindow> ActivityCollector::mActivityWindowsList;
+
+// initialize the output json path
+const std::string ActivityCollector::outputJsonPath = "C:/temp/activity.json";
 
 /// <summary>
 ///  Utility function to write the collected data to file
@@ -31,38 +40,85 @@ void ActivityCollector::WriteDatatoFile(std::string processName, double elapsedT
 /// </summary>
 void ActivityCollector::CollectActivityData()
 {
-    HWND activeWindow = GetForegroundWindow();
+    HWND activeWindowHandle = GetForegroundWindow();
 
-    if (activeWindow != nullptr)
+    if (activeWindowHandle != nullptr)
     {
+        // Update the active window's pid into the below varible
         DWORD processId;
-        GetWindowThreadProcessId(activeWindow, &processId);
+        GetWindowThreadProcessId(activeWindowHandle, &processId);
 
+        // Capture the process handle
         HANDLE processHandle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processId);
+
+
         if (processHandle != nullptr)
         {
             wchar_t processName[MAX_PATH];
+
+            //capture the process name into the processName variable
             if (GetModuleBaseName(processHandle, nullptr, processName, sizeof(processName) / sizeof(wchar_t)) != 0)
             {
-                if (activeWindows.find(activeWindow) == activeWindows.end())
+                bool isFound = false;
+
+                // convert processName from widechar to string
+                auto processNameString = Utilities::convertWcharArraytoString(processName);
+
+                // search for the process name in the captured activity window list
+                // and update the Activity Window data
+                for (auto& activeWindow : mActivityWindowsList)
                 {
-                    activeWindows[activeWindow] = std::chrono::steady_clock::now();
+
+                    if (activeWindow.mProcessName == processNameString)
+                    {
+                        isFound = true;
+
+                        double elapsedTime = 0;
+
+                        // capture the current time
+                        auto curTime = std::chrono::system_clock::now();
+
+                        // window is already active
+                        if (activeWindow.isActive == true)
+                        {
+                            // update the 
+                            elapsedTime = std::chrono::duration<double>(curTime - activeWindow.lastAccesedTime).count();
+                        }
+                        else
+                        {
+                            // switched to this window 
+                            elapsedTime = 1;
+
+                            //set the active state of the window
+                            activeWindow.isActive = true;
+
+                        }
+                            
+                        activeWindow.lastAccesedTime = curTime;
+
+                        // add the calculate elapsedTime to the duration
+                        activeWindow.totalDuration += elapsedTime;
+
+                            
+                    }
+                    else
+                    {
+                        //reset the active state for all other windows
+                        activeWindow.isActive = false; 
+                    }
+
                 }
-                else
+
+                // no process entry in the list, Add it to the list
+                if (!isFound)
                 {
-                    std::chrono::steady_clock::time_point previousTime = activeWindows[activeWindow];
-                    std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
-                    double elapsedTime = std::chrono::duration<double>(currentTime - previousTime).count();
-                    activeWindows[activeWindow] = currentTime;
-
-                    std::wstring wide_str_processName(processName);
-                    // Append the process name to the file
-                    std::string processNamestr(wide_str_processName.begin(), wide_str_processName.end());
-
-                    // TODO: Write data to file. To be replaced with a DB.
-                    WriteDatatoFile(processNamestr, elapsedTime);
-
+                    // a new entry gets added for the new window
+                    mActivityWindowsList.emplace_back(processNameString);
                 }
+                
+                // update the json 
+                generateActivityWindowJson(mActivityWindowsList, outputJsonPath);
+
             }
 
             CloseHandle(processHandle);
@@ -71,5 +127,35 @@ void ActivityCollector::CollectActivityData()
     else
     {
         std::cerr << "No foreground window available." << std::endl;
+    }
+}
+
+void ActivityCollector::generateActivityWindowJson(std::list<ActivityWindow>& activityWindows, const std::string& outputFile)
+{
+    json jsonData;
+
+    for (const auto& activityWindow : activityWindows)
+    {
+        json activity;
+        activity["ProcessName"] = activityWindow.mProcessName;
+        activity["SessionId"] = activityWindow.sessionId;
+        activity["firstAccesedTime"] = std::chrono::system_clock::to_time_t(activityWindow.firstAccesedTime);
+        activity["lastAccesedTime"] = std::chrono::system_clock::to_time_t(activityWindow.lastAccesedTime);
+        activity["totalDuration"] = activityWindow.totalDuration;
+        activity["isActive"] = activityWindow.isActive;
+        // ... other members
+
+        jsonData.push_back(activity);
+    }
+
+    std::ofstream output(outputFile);
+    if (output)
+    {
+        output << jsonData.dump(4);  // Indent with 4 spaces
+        std::cout << "JSON file generated successfully." << std::endl;
+    }
+    else
+    {
+        std::cout << "Error opening output file: " << outputFile << std::endl;
     }
 }
