@@ -5,10 +5,17 @@
 #include <iomanip> // For setfill and setw
 #include <string>
 #include <sstream>
+#include <locale>
+#include <codecvt>
 
 class Utilities
 {
 public:
+	/// <summary>
+	/// Utility function to return the current day
+    /// Used in identifying the daily sessions
+	/// </summary>
+	/// <returns> date string in the format DD-MM-YYYY</returns>
 	static std::string getCurrentDay() {
         // Get the current time
         std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
@@ -30,6 +37,20 @@ public:
             << year;
 
         return oss.str();
+    }
+
+    static std::string convertWcharArraytoString(const wchar_t* wideCharArray)
+    {
+        // Create a wide character string from the input wide character array
+        std::wstring wideString(wideCharArray);
+
+
+        // Convert the wide character string to a narrow character string
+#pragma warning(disable: 4244)
+        std::string narrowString(wideString.begin(), wideString.end());
+#pragma warning(default: 4244)
+
+        return narrowString;
     }
 };
 
