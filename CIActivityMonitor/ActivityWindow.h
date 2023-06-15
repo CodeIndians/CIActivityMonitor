@@ -11,7 +11,6 @@ public:
 	std::chrono::system_clock::time_point lastAccesedTime;
 	double totalDuration;
 	bool isActive;
-	ActivityWindow();
-	ActivityWindow(std::string processName);
+	explicit ActivityWindow(std::string processName);
 };
 
