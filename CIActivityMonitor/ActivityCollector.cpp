@@ -152,7 +152,6 @@ void ActivityCollector::generateActivityWindowJson(std::list<ActivityWindow>& ac
     if (output)
     {
         output << jsonData.dump(4);  // Indent with 4 spaces
-        std::cout << "JSON file generated successfully." << std::endl;
     }
     else
     {
