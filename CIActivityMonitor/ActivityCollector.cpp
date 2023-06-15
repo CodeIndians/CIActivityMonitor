@@ -68,8 +68,8 @@ void ActivityCollector::CollectActivityData()
                 // and update the Activity Window data
                 for (auto& activeWindow : mActivityWindowsList)
                 {
-
-                    if (activeWindow.mProcessName == processNameString)
+                    // identify if the activity window is already present and also check if the entry is from the current day
+                    if (activeWindow.mProcessName == processNameString && Utilities::getCurrentDay() == activeWindow.sessionId)
                     {
                         isFound = true;
 
